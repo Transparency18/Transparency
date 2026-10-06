@@ -1,13 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Camera } from "lucide-react";
 import { Button } from "../../components/common/Button";
 import { phases } from "../../data/mockData";
 import { register } from "../../services/authService";
 import { AuthShell, Field, FormError, inputClass } from "./AuthShell";
-
-const MAX_PHOTO_SIZE = 10 * 1024 * 1024; // server compresses to under 1 MB
-const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const initialForm = { name: "", email: "", phone: "", phase: "", villaNo: "", password: "" };
 
@@ -25,8 +21,6 @@ function validate(form) {
 export function RegisterPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
-  const [photo, setPhoto] = useState(null);
-  const [preview, setPreview] = useState("");
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,23 +28,6 @@ export function RegisterPage() {
   const update = (field) => (e) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
     setErrors((prev) => ({ ...prev, [field]: undefined }));
-  };
-
-  const handlePhoto = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!PHOTO_TYPES.includes(file.type)) {
-      setErrors((prev) => ({ ...prev, photo: "Photo must be a JPG, PNG or WEBP image." }));
-      return;
-    }
-    if (file.size > MAX_PHOTO_SIZE) {
-      setErrors((prev) => ({ ...prev, photo: "Photo must be 10 MB or smaller." }));
-      return;
-    }
-    if (preview) URL.revokeObjectURL(preview);
-    setPhoto(file);
-    setPreview(URL.createObjectURL(file));
-    setErrors((prev) => ({ ...prev, photo: undefined }));
   };
 
   const handleSubmit = async (e) => {
@@ -63,7 +40,6 @@ export function RegisterPage() {
     const data = new FormData();
     Object.entries(form).forEach(([key, value]) => data.append(key, value.trim()));
     data.set("password", form.password);
-    if (photo) data.append("photo", photo);
 
     setLoading(true);
     try {
@@ -92,24 +68,6 @@ export function RegisterPage() {
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <FormError message={formError} />
-
-        <div className="flex flex-col items-center">
-          <label
-            htmlFor="photo"
-            className="relative w-24 h-24 rounded-full border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer hover:border-blue-500"
-          >
-            {preview ? (
-              <img src={preview} alt="Profile preview" className="w-full h-full object-cover" />
-            ) : (
-              <Camera className="w-7 h-7 text-gray-400" />
-            )}
-          </label>
-          <input id="photo" type="file" accept={PHOTO_TYPES.join(",")} className="sr-only" onChange={handlePhoto} />
-          <span className="mt-2 text-xs text-gray-500">
-            {photo ? "Click to change photo" : "Upload profile photo (optional, max 10 MB)"}
-          </span>
-          {errors.photo && <p className="mt-1 text-xs text-red-600">{errors.photo}</p>}
-        </div>
 
         <Field label="Full name" htmlFor="name" error={errors.name}>
           <input id="name" autoComplete="name" className={inputClass} value={form.name} onChange={update("name")} />
@@ -142,7 +100,7 @@ export function RegisterPage() {
         </Field>
 
         <Button type="submit" size="lg" className="w-full" disabled={loading}>
-          {loading ? "Creating account…" : "Register"}
+          {loading ? "Creating account..." : "Register"}
         </Button>
       </form>
     </AuthShell>
