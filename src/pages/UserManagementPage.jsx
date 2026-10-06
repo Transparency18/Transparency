@@ -6,11 +6,16 @@ import { Button } from "../components/common/Button";
 import { RefreshCw, Search, Trash2, Users } from "lucide-react";
 import { useAuth, ROLES } from "../context/AuthContext";
 import { phases } from "../data/mockData";
-import { getUsers, deleteUser } from "../services/userService";
+import { getUsers, deleteUser, changeUserRole } from "../services/userService";
 import { useToast } from "../context/ToastContext";
 
 const ROLE_LABELS = { member: "Member", volunteer: "Volunteer", guard: "Guard" };
 const ROLE_BADGES = { member: "default", volunteer: "primary", guard: "warning" };
+const ROLE_SELECT_STYLES = {
+  member: "bg-gray-100 text-gray-800",
+  volunteer: "bg-blue-100 text-blue-800",
+  guard: "bg-orange-100 text-orange-800",
+};
 
 export function UserManagementPage() {
   const { role, logout } = useAuth();
@@ -21,6 +26,7 @@ export function UserManagementPage() {
   const [phaseFilter, setPhaseFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [savingRoleId, setSavingRoleId] = useState(null);
   const { addToast } = useToast();
 
   const isVolunteer = role === ROLES.VOLUNTEER;
@@ -35,6 +41,24 @@ export function UserManagementPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRoleChange = async (u, newRole) => {
+    if (newRole === u.role) return;
+    if (newRole === 'volunteer' && !window.confirm(
+      `Make ${u.name} a volunteer? They will be able to see, change and delete all users.`
+    )) return;
+    setSavingRoleId(u.id);
+    try {
+      await changeUserRole(u.id, newRole);
+      setUsersList(prev => prev.map(x => (x.id === u.id ? { ...x, role: newRole } : x)));
+      addToast(`${u.name} is now a ${ROLE_LABELS[newRole]}.`, 'success');
+    } catch (err) {
+      if (err.status === 401) return logout();
+      window.alert(err.message);
+    } finally {
+      setSavingRoleId(null);
     }
   };
 
@@ -156,7 +180,21 @@ export function UserManagementPage() {
                     </div>
                   </td>
                   <td className="py-3 px-6 text-sm">
-                    <Badge variant={ROLE_BADGES[u.role]}>{ROLE_LABELS[u.role] || u.role}</Badge>
+                    {u.locked ? (
+                      <Badge variant={ROLE_BADGES[u.role]} title="Main volunteer account">{ROLE_LABELS[u.role] || u.role}</Badge>
+                    ) : (
+                      <select
+                        aria-label={`Role for ${u.name}`}
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium outline-none cursor-pointer border-0 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 ${ROLE_SELECT_STYLES[u.role] || ''}`}
+                        value={u.role}
+                        disabled={savingRoleId === u.id}
+                        onChange={(e) => handleRoleChange(u, e.target.value)}
+                      >
+                        {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    )}
                   </td>
                   <td className="py-3 px-6 text-sm">{phases.find(p => p.id === u.phase)?.name || u.phase || '-'}</td>
                   <td className="py-3 px-6 text-sm">{u.villa_no || '-'}</td>
@@ -164,7 +202,7 @@ export function UserManagementPage() {
                   <td className="py-3 px-6 text-sm">{u.phone || '-'}</td>
                   <td className="py-3 px-6 text-sm text-gray-500 whitespace-nowrap">{format(new Date(u.created_at), 'dd MMM yyyy')}</td>
                   <td className="py-3 px-6 text-right">
-                    {u.role !== 'volunteer' && (
+                    {!u.locked && u.role !== 'volunteer' && (
                       <button
                         onClick={() => handleDelete(u)}
                         disabled={deletingId === u.id}
