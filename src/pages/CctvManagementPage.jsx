@@ -75,7 +75,7 @@ export function CctvManagementPage() {
           <h2 className="text-2xl font-bold text-gray-900">CCTV & Infrastructure</h2>
           <p className="text-gray-500 mt-1">Manage and monitor community camera network</p>
         </div>
-        {role !== ROLES.RESIDENT && (
+        {role !== ROLES.MEMBER && (
           <Button icon={Plus} onClick={() => setIsModalOpen(true)}>Add Camera</Button>
         )}
       </div>
@@ -163,7 +163,7 @@ export function CctvManagementPage() {
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Phase / Location</th>
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                {role !== ROLES.RESIDENT && <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>}
+                {role !== ROLES.MEMBER && <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -183,7 +183,7 @@ export function CctvManagementPage() {
                     <td className="py-4 px-6">
                       {getStatusBadge(cam.status)}
                     </td>
-                    {role !== ROLES.RESIDENT && (
+                    {role !== ROLES.MEMBER && (
                       <td className="py-4 px-6 text-right whitespace-nowrap">
                         <select 
                           className="text-sm border border-gray-300 rounded-md px-2 py-1 mr-2"

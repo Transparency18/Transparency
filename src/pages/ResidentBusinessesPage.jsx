@@ -56,7 +56,7 @@ export function ResidentBusinessesPage() {
           <h2 className="text-2xl font-bold text-gray-900">Resident Businesses</h2>
           <p className="text-gray-500 mt-1">Directory of commercial services run by residents</p>
         </div>
-        {role === ROLES.RESIDENT && (
+        {role === ROLES.MEMBER && (
           <Button icon={Plus} onClick={() => setIsModalOpen(true)}>Register Business</Button>
         )}
       </div>

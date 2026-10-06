@@ -47,7 +47,7 @@ export function InfrastructurePage() {
           <h2 className="text-2xl font-bold text-gray-900">Infrastructure & Assets</h2>
           <p className="text-gray-500 mt-1">Manage community assets and maintenance schedules</p>
         </div>
-        {role !== ROLES.RESIDENT && (
+        {role !== ROLES.MEMBER && (
           <Button icon={Plus} onClick={() => setIsModalOpen(true)}>Add Asset</Button>
         )}
       </div>
@@ -66,7 +66,7 @@ export function InfrastructurePage() {
               <th className="py-3 px-6 text-xs text-gray-500">Asset</th>
               <th className="py-3 px-6 text-xs text-gray-500">Location</th>
               <th className="py-3 px-6 text-xs text-gray-500">Status</th>
-              {role !== ROLES.RESIDENT && <th className="py-3 px-6 text-xs text-gray-500 text-right">Actions</th>}
+              {role !== ROLES.MEMBER && <th className="py-3 px-6 text-xs text-gray-500 text-right">Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -80,7 +80,7 @@ export function InfrastructurePage() {
                 <td className="py-3 px-6 text-sm">
                   <Badge variant={item.status === 'Working' ? 'success' : 'danger'}>{item.status}</Badge>
                 </td>
-                {role !== ROLES.RESIDENT && (
+                {role !== ROLES.MEMBER && (
                   <td className="py-3 px-6 text-right whitespace-nowrap">
                     <select 
                       className="text-sm border rounded p-1 mr-2"
@@ -101,7 +101,7 @@ export function InfrastructurePage() {
                 )}
               </tr>
             ))}
-            {filteredItems.length === 0 && <tr><td colSpan={role !== ROLES.RESIDENT ? "4" : "3"} className="text-center py-6 text-gray-500">No assets found for this phase.</td></tr>}
+            {filteredItems.length === 0 && <tr><td colSpan={role !== ROLES.MEMBER ? "4" : "3"} className="text-center py-6 text-gray-500">No assets found for this phase.</td></tr>}
           </tbody>
         </table>
       </Card>

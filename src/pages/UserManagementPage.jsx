@@ -1,195 +1,176 @@
 import { useState, useEffect } from "react";
-import { localDb } from "../services/localDb";
+import { format } from "date-fns";
 import { Card, CardHeader, CardTitle } from "../components/common/Card";
 import { Badge } from "../components/common/Badge";
 import { Button } from "../components/common/Button";
-import { Modal } from "../components/common/Modal";
-import { Plus, Trash2, Users } from "lucide-react";
+import { RefreshCw, Search, Trash2, Users } from "lucide-react";
 import { useAuth, ROLES } from "../context/AuthContext";
 import { phases } from "../data/mockData";
+import { getUsers, deleteUser } from "../services/userService";
 import { useToast } from "../context/ToastContext";
 
+const ROLE_LABELS = { member: "Member", volunteer: "Volunteer", guard: "Guard" };
+const ROLE_BADGES = { member: "default", volunteer: "primary", guard: "warning" };
+
 export function UserManagementPage() {
+  const { role, phase, logout } = useAuth();
   const [usersList, setUsersList] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [roleFilter, setRoleFilter] = useState("All");
-  const [formData, setFormData] = useState({ name: '', role: 'Resident', email: '', contact: '', phase: 'p1', shift: 'Day', photo: '' });
-  const { role, phase } = useAuth();
+  const [search, setSearch] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
   const { addToast } = useToast();
-  
-  // Only Super Admin can view/add users
-  const isAdmin = role === ROLES.VOLUNTEER;
 
-  useEffect(() => {
-    setUsersList(localDb.getUsers());
-  }, []);
+  const isVolunteer = role === ROLES.VOLUNTEER;
 
-  const handleAdd = (e) => {
-    e.preventDefault();
-    localDb.addUser(formData);
-    setUsersList(localDb.getUsers());
-    setIsModalOpen(false);
-    addToast(`User ${formData.name} added as ${formData.role}.`, 'success');
-    setFormData({ name: '', role: 'Resident', email: '', contact: '', phase: 'p1', shift: 'Day', photo: '' });
-  };
-
-  const handlePhotoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, photo: reader.result });
-      };
-      reader.readAsDataURL(file);
+  const loadUsers = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      setUsersList(await getUsers());
+    } catch (err) {
+      if (err.status === 401) return logout();
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleDelete = async (u) => {
+    if (!window.confirm(`Delete ${u.name} (${u.email})? This removes their account and cannot be undone.`)) return;
+    setDeletingId(u.id);
+    try {
+      await deleteUser(u.id);
+      setUsersList(prev => prev.filter(x => x.id !== u.id));
+      addToast(`${u.name} was deleted.`, 'success');
+    } catch (err) {
+      if (err.status === 401) return logout();
+      window.alert(err.message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (isVolunteer) loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVolunteer]);
+
+  if (!isVolunteer) {
+    return <div className="p-8 text-center text-gray-500">You do not have permission to view this page.</div>;
+  }
+
+  const query = search.trim().toLowerCase();
   const filteredUsers = usersList.filter(u => {
     const matchesPhase = phase === 'All' || u.phase === phase || !u.phase;
     const matchesRole = roleFilter === 'All' || u.role === roleFilter;
-    return matchesPhase && matchesRole;
+    const matchesSearch = !query ||
+      [u.name, u.email, u.phone, u.villa_no].some(v => v?.toLowerCase().includes(query));
+    return matchesPhase && matchesRole && matchesSearch;
   });
-
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to remove this user?")) {
-      localDb.deleteUser(id);
-      setUsersList(localDb.getUsers());
-      addToast('User removed successfully.', 'success');
-    }
-  };
-
-  if (!isAdmin) {
-    return <div className="p-8 text-center text-gray-500">You do not have permission to view this page.</div>;
-  }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
-          <p className="text-gray-500 mt-1">Manage volunteers and residents</p>
+          <p className="text-gray-500 mt-1">Everyone who has registered</p>
         </div>
-        <Button icon={Plus} onClick={() => setIsModalOpen(true)}>Add User</Button>
+        <Button variant="secondary" icon={RefreshCw} onClick={loadUsers} disabled={loading}>Refresh</Button>
       </div>
 
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
-            <CardTitle>Users Directory</CardTitle>
-            <select 
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-            >
-              <option value="All">All Roles</option>
-              <option value="Resident">Resident</option>
-              <option value="Volunteer">Volunteer</option>
-              <option value="Guard">Guard</option>
-            </select>
-          </div>
-        </CardHeader>
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-y border-gray-200">
-              <th className="py-3 px-6 text-xs text-gray-500">Name</th>
-              <th className="py-3 px-6 text-xs text-gray-500">Role</th>
-              <th className="py-3 px-6 text-xs text-gray-500">Phase</th>
-              <th className="py-3 px-6 text-xs text-gray-500">Email ID</th>
-              <th className="py-3 px-6 text-xs text-gray-500">Mobile Number</th>
-              <th className="py-3 px-6 text-xs text-gray-500 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.map(u => (
-              <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-3 px-6 font-medium">
-                  <div className="flex items-center">
-                    {u.photo ? (
-                      <img src={u.photo} alt={u.name} className="w-8 h-8 rounded-full object-cover mr-3 border border-gray-200" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mr-3">
-                        <Users className="w-4 h-4" />
-                      </div>
-                    )}
-                    {u.name}
-                  </div>
-                </td>
-                <td className="py-3 px-6 text-sm">
-                  <div className="flex flex-col items-start gap-1">
-                    <Badge variant={u.role === 'Volunteer' ? 'primary' : (u.role === 'Guard' ? 'warning' : 'default')}>{u.role}</Badge>
-                    {u.role === 'Guard' && <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{u.shift} Shift</span>}
-                  </div>
-                </td>
-                <td className="py-3 px-6 text-sm">
-                  {phases.find(p => p.id === u.phase)?.name || u.phase}
-                  
-                </td>
-                <td className="py-3 px-6 text-sm">{u.email || '-'}</td>
-                <td className="py-3 px-6 text-sm">{u.contact}</td>
-                <td className="py-3 px-6 text-right">
-                  <button 
-                    onClick={() => handleDelete(u.id)}
-                    className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors"
-                    title="Remove User"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {filteredUsers.length === 0 && <tr><td colSpan="6" className="text-center py-6 text-gray-500">No users found for this phase.</td></tr>}
-          </tbody>
-        </table>
-      </Card>
-
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add User">
-        <form onSubmit={handleAdd} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Name *</label>
-            <input required className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Rahul Sharma" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Role *</label>
-            <select className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
-              <option value="Resident">Resident</option>
-              <option value="Volunteer">Volunteer</option>
-              <option value="Guard">Guard</option>
-            </select>
-          </div>
-          {formData.role === 'Guard' && (
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Shift *</label>
-              <select className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={formData.shift} onChange={e => setFormData({...formData, shift: e.target.value})}>
-                <option value="Day">Day</option>
-                <option value="Night">Night</option>
-                <option value="Reliever">Reliever</option>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <CardTitle>
+              Users Directory <span className="text-sm font-normal text-gray-500">({filteredUsers.length})</span>
+            </CardTitle>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <div className="relative">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  className="w-full sm:w-64 border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                  placeholder="Search name, email, phone, villa"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <select
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+              >
+                <option value="All">All Roles</option>
+                <option value="member">Member</option>
+                <option value="volunteer">Volunteer</option>
+                <option value="guard">Guard</option>
               </select>
             </div>
-          )}
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Phase *</label>
-            <select className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={formData.phase} onChange={e => setFormData({...formData, phase: e.target.value})}>
-              {phases.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
           </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Email *</label>
-            <input required type="email" className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="example@email.com" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Contact Number *</label>
-            <input required type="tel" className="w-full border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value})} placeholder="Mobile number" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Profile Photo</label>
-            <input type="file" accept="image/*" className="w-full border rounded-lg p-2 text-sm outline-none" onChange={handlePhotoUpload} />
-          </div>
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button variant="secondary" type="button" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit">Save User</Button>
-          </div>
-        </form>
-      </Modal>
+        </CardHeader>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-y border-gray-200">
+                <th className="py-3 px-6 text-xs text-gray-500">Name</th>
+                <th className="py-3 px-6 text-xs text-gray-500">Role</th>
+                <th className="py-3 px-6 text-xs text-gray-500">Phase</th>
+                <th className="py-3 px-6 text-xs text-gray-500">Villa No.</th>
+                <th className="py-3 px-6 text-xs text-gray-500">Email ID</th>
+                <th className="py-3 px-6 text-xs text-gray-500">Mobile Number</th>
+                <th className="py-3 px-6 text-xs text-gray-500">Registered</th>
+                <th className="py-3 px-6 text-xs text-gray-500 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!loading && filteredUsers.map(u => (
+                <tr key={u.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-6 font-medium">
+                    <div className="flex items-center">
+                      {u.photo_url ? (
+                        <a href={u.photo_url} target="_blank" rel="noreferrer">
+                          <img src={u.photo_url} alt={u.name} className="w-8 h-8 rounded-full object-cover mr-3 border border-gray-200" />
+                        </a>
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mr-3">
+                          <Users className="w-4 h-4" />
+                        </div>
+                      )}
+                      {u.name}
+                    </div>
+                  </td>
+                  <td className="py-3 px-6 text-sm">
+                    <Badge variant={ROLE_BADGES[u.role]}>{ROLE_LABELS[u.role] || u.role}</Badge>
+                  </td>
+                  <td className="py-3 px-6 text-sm">{phases.find(p => p.id === u.phase)?.name || u.phase || '-'}</td>
+                  <td className="py-3 px-6 text-sm">{u.villa_no || '-'}</td>
+                  <td className="py-3 px-6 text-sm">{u.email}</td>
+                  <td className="py-3 px-6 text-sm">{u.phone || '-'}</td>
+                  <td className="py-3 px-6 text-sm text-gray-500 whitespace-nowrap">{format(new Date(u.created_at), 'dd MMM yyyy')}</td>
+                  <td className="py-3 px-6 text-right">
+                    {u.role !== 'volunteer' && (
+                      <button
+                        onClick={() => handleDelete(u)}
+                        disabled={deletingId === u.id}
+                        className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                        title="Delete user"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {loading && <tr><td colSpan="8" className="text-center py-6 text-gray-500">Loading users…</td></tr>}
+              {!loading && error && <tr><td colSpan="8" className="text-center py-6 text-red-600">{error}</td></tr>}
+              {!loading && !error && filteredUsers.length === 0 && (
+                <tr><td colSpan="8" className="text-center py-6 text-gray-500">No users found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   );
 }

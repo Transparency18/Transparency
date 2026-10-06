@@ -42,7 +42,7 @@ export function AssociationPage() {
           <h2 className="text-2xl font-bold text-gray-900">Association Committee</h2>
           <p className="text-gray-500 mt-1">Directory of management committee members</p>
         </div>
-        {role !== ROLES.RESIDENT && (
+        {role !== ROLES.MEMBER && (
           <Button icon={Plus} onClick={() => setIsModalOpen(true)}>Add Member</Button>
         )}
       </div>
@@ -50,7 +50,7 @@ export function AssociationPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {filteredMembers.map(member => (
           <Card key={member.id} className="text-center p-6 flex flex-col items-center relative group">
-             {role !== ROLES.RESIDENT && (
+             {role !== ROLES.MEMBER && (
                <button 
                  onClick={() => handleDelete(member.id)}
                  className="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"

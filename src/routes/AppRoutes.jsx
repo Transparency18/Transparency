@@ -19,11 +19,16 @@ import { GuardsPage } from "../pages/GuardsPage";
 import { ClosedHousesPage } from "../pages/ClosedHousesPage";
 import { ResidentBusinessesPage } from "../pages/ResidentBusinessesPage";
 import { VolunteersPage } from "../pages/VolunteersPage";
+import { LoginPage } from "../pages/auth/LoginPage";
+import { RegisterPage } from "../pages/auth/RegisterPage";
+import { ProtectedRoute, GuestRoute } from "./ProtectedRoute";
 
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<MainLayout />}>
+      <Route path="login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+      <Route path="register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
+      <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         <Route index element={<DashboardPage />} />
         <Route path="security" element={<SecurityPage />} />
         <Route path="cctv" element={<CctvManagementPage />} />

@@ -42,7 +42,7 @@ export function VehiclesPage() {
           <h2 className="text-2xl font-bold text-gray-900">Vehicle Tracking</h2>
           <p className="text-gray-500 mt-1">Manage resident and authorized vehicles</p>
         </div>
-        {role !== ROLES.RESIDENT && (
+        {role !== ROLES.MEMBER && (
           <Button icon={Plus} onClick={() => setIsModalOpen(true)}>Register Vehicle</Button>
         )}
       </div>
@@ -60,7 +60,7 @@ export function VehiclesPage() {
               <th className="py-3 px-6 text-xs text-gray-500">Owner</th>
               <th className="py-3 px-6 text-xs text-gray-500">House / Unit</th>
               <th className="py-3 px-6 text-xs text-gray-500">Type</th>
-              {role !== ROLES.RESIDENT && <th className="py-3 px-6 text-xs text-gray-500 text-right">Actions</th>}
+              {role !== ROLES.MEMBER && <th className="py-3 px-6 text-xs text-gray-500 text-right">Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -70,7 +70,7 @@ export function VehiclesPage() {
                 <td className="py-3 px-6 text-sm">{v.owner}</td>
                 <td className="py-3 px-6 text-sm">{v.houseId}</td>
                 <td className="py-3 px-6 text-sm"><Badge>{v.type}</Badge></td>
-                {role !== ROLES.RESIDENT && (
+                {role !== ROLES.MEMBER && (
                   <td className="py-3 px-6 text-right">
                     <button 
                       onClick={() => handleDelete(v.id)}

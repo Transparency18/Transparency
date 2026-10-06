@@ -31,8 +31,8 @@ export function PaymentsPage() {
     e.preventDefault();
     const newPayment = {
       ...formData,
-      houseId: role === ROLES.RESIDENT ? "My House" : formData.houseId,
-      ownerName: role === ROLES.RESIDENT ? "Self" : formData.ownerName,
+      houseId: role === ROLES.MEMBER ? "My House" : formData.houseId,
+      ownerName: role === ROLES.MEMBER ? "Self" : formData.ownerName,
       date: new Date().toISOString().split('T')[0]
     };
     localDb.addPayment(newPayment);
@@ -93,7 +93,7 @@ export function PaymentsPage() {
           <p className="text-gray-500 mt-1">Manage maintenance fees and association collections</p>
         </div>
         <Button icon={Plus} onClick={() => setIsModalOpen(true)}>
-          {role === ROLES.RESIDENT ? "Pay Amount" : "Record Payment"}
+          {role === ROLES.MEMBER ? "Pay Amount" : "Record Payment"}
         </Button>
       </div>
 
@@ -158,7 +158,7 @@ export function PaymentsPage() {
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Paid / Unpaid</th>
-                {role !== ROLES.RESIDENT && <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>}
+                {role !== ROLES.MEMBER && <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -186,7 +186,7 @@ export function PaymentsPage() {
                   <td className="py-4 px-6">
                     {getStatusBadge(payment.status)}
                   </td>
-                  {role !== ROLES.RESIDENT && (
+                  {role !== ROLES.MEMBER && (
                     <td className="py-4 px-6 text-right whitespace-nowrap">
                       {payment.proofPhoto && (
                         <button 
@@ -215,7 +215,7 @@ export function PaymentsPage() {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Record Payment">
         <form onSubmit={handleAddPayment} className="space-y-4">
-          {role === ROLES.RESIDENT ? (
+          {role === ROLES.MEMBER ? (
             <div className="bg-blue-50 text-blue-800 p-3 rounded-lg text-sm mb-4">
                You are paying dues for your registered house.
             </div>

@@ -197,7 +197,7 @@ export function SecurityPage() {
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Location / Phase</th>
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Reported Info</th>
                 <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status & Priority</th>
-                {role !== ROLES.RESIDENT && <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>}
+                {role !== ROLES.MEMBER && <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -236,7 +236,7 @@ export function SecurityPage() {
                         {getPriorityBadge(issue.priority)}
                       </div>
                     </td>
-                    {role !== ROLES.RESIDENT && (
+                    {role !== ROLES.MEMBER && (
                       <td className="py-4 px-6 text-right whitespace-nowrap">
                         {issue.status !== "Resolved" && (
                           <select 
@@ -272,7 +272,7 @@ export function SecurityPage() {
               })}
               {filteredIssues.length === 0 && (
                 <tr>
-                  <td colSpan={role !== ROLES.RESIDENT ? "5" : "4"} className="py-8 text-center text-gray-500">
+                  <td colSpan={role !== ROLES.MEMBER ? "5" : "4"} className="py-8 text-center text-gray-500">
                     No security issues found.
                   </td>
                 </tr>

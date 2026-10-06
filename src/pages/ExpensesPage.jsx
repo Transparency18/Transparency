@@ -59,7 +59,7 @@ export function ExpensesPage() {
           <h2 className="text-2xl font-bold text-gray-900">Expenses</h2>
           <p className="text-gray-500 mt-1">Track community expenses and vendor payouts</p>
         </div>
-        {role !== ROLES.RESIDENT && (
+        {role !== ROLES.MEMBER && (
           <Button icon={Plus} onClick={() => setIsModalOpen(true)}>Log Expense</Button>
         )}
       </div>

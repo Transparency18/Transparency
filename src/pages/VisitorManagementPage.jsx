@@ -109,7 +109,7 @@ export function VisitorManagementPage() {
           <h2 className="text-2xl font-bold text-gray-900">Visitor Management</h2>
           <p className="text-gray-500 mt-1">Track and manage visitors entering the community</p>
         </div>
-        {role !== ROLES.RESIDENT && (
+        {role !== ROLES.MEMBER && (
           <div className="flex space-x-2 w-full sm:w-auto">
             <Button variant="secondary" onClick={() => setIsPreapproveModalOpen(true)}>Pre-approve</Button>
             <Button icon={Plus} onClick={() => setIsModalOpen(true)}>New Entry</Button>
@@ -226,12 +226,12 @@ export function VisitorManagementPage() {
                 </div>
               </div>
               
-              {v.status === "Inside" && role !== ROLES.RESIDENT && (
+              {v.status === "Inside" && role !== ROLES.MEMBER && (
                 <div className="mt-4 flex justify-end space-x-2">
                   <Button variant="primary" size="sm" onClick={() => handleMarkExit(v.id)}>Mark Exit</Button>
                 </div>
               )}
-              {v.status === "Pre-approved" && role !== ROLES.RESIDENT && (
+              {v.status === "Pre-approved" && role !== ROLES.MEMBER && (
                 <div className="mt-4 flex justify-end space-x-2">
                   <Button variant="success" size="sm" onClick={() => {
                     localDb.updateVisitor(v.id, { 

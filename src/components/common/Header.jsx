@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Bell, Menu, User } from "lucide-react";
+import { Bell, LogOut, Menu, User } from "lucide-react";
 import { useAuth, ROLES } from "../../context/AuthContext";
 import { ProfileActivityModal } from "./ProfileActivityModal";
 import { phases } from "../../data/mockData";
 
 export function Header({ setSidebarOpen }) {
-  const { role, setRole, phase, setPhase, sector, setSector } = useAuth();
+  const { user, logout, role, phase, setPhase } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   return (
@@ -41,22 +41,6 @@ export function Header({ setSidebarOpen }) {
                 </select>
               </div>
             )}
-            
-
-
-            {/* Role Switcher for Demo */}
-            <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 sm:px-3 sm:py-1.5">
-              <span className="hidden sm:inline text-xs text-gray-500 mr-2 font-medium uppercase tracking-wider">Demo:</span>
-              <select 
-                className="bg-transparent text-xs sm:text-sm font-medium text-gray-900 outline-none cursor-pointer"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-              >
-                {Object.values(ROLES).map(r => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            </div>
           </div>
 
           <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full relative">
@@ -68,21 +52,33 @@ export function Header({ setSidebarOpen }) {
             className="flex items-center space-x-2 pl-4 border-l border-gray-200 cursor-pointer hover:bg-gray-50 rounded-lg p-1 pr-2 transition-colors"
             onClick={() => setIsProfileOpen(true)}
           >
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700">
-              <User className="w-5 h-5" />
-            </div>
+            {user?.photo_url ? (
+              <img src={user.photo_url} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
+            ) : (
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700">
+                <User className="w-5 h-5" />
+              </div>
+            )}
             <div className="hidden md:block text-sm">
-              <p className="font-medium text-gray-700">Sudeep</p>
+              <p className="font-medium text-gray-700">{user?.name}</p>
               <p className="text-xs text-gray-500">{role}</p>
             </div>
           </div>
+
+          <button
+            onClick={logout}
+            title="Log out"
+            className="p-2 text-gray-500 hover:bg-gray-100 hover:text-red-600 rounded-full"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
         </div>
       </header>
 
       <ProfileActivityModal 
         isOpen={isProfileOpen} 
         onClose={() => setIsProfileOpen(false)} 
-        userName="Sudeep" 
+        userName={user?.name} 
         role={role} 
       />
     </>
