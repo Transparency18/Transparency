@@ -13,11 +13,12 @@ const ROLE_LABELS = { member: "Member", volunteer: "Volunteer", guard: "Guard" }
 const ROLE_BADGES = { member: "default", volunteer: "primary", guard: "warning" };
 
 export function UserManagementPage() {
-  const { role, phase, logout } = useAuth();
+  const { role, logout } = useAuth();
   const [usersList, setUsersList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [roleFilter, setRoleFilter] = useState("All");
+  const [phaseFilter, setPhaseFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState(null);
   const { addToast } = useToast();
@@ -52,8 +53,14 @@ export function UserManagementPage() {
     }
   };
 
+  // Load on open, and again whenever the volunteer comes back to this tab,
+  // so people who registered in the meantime show up.
   useEffect(() => {
-    if (isVolunteer) loadUsers();
+    if (!isVolunteer) return;
+    loadUsers();
+    const reloadOnReturn = () => document.visibilityState === 'visible' && loadUsers();
+    document.addEventListener('visibilitychange', reloadOnReturn);
+    return () => document.removeEventListener('visibilitychange', reloadOnReturn);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVolunteer]);
 
@@ -63,7 +70,7 @@ export function UserManagementPage() {
 
   const query = search.trim().toLowerCase();
   const filteredUsers = usersList.filter(u => {
-    const matchesPhase = phase === 'All' || u.phase === phase || !u.phase;
+    const matchesPhase = phaseFilter === 'All' || u.phase === phaseFilter;
     const matchesRole = roleFilter === 'All' || u.role === roleFilter;
     const matchesSearch = !query ||
       [u.name, u.email, u.phone, u.villa_no].some(v => v?.toLowerCase().includes(query));
@@ -96,6 +103,14 @@ export function UserManagementPage() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
+              <select
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                value={phaseFilter}
+                onChange={(e) => setPhaseFilter(e.target.value)}
+              >
+                <option value="All">All Phases</option>
+                {phases.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
               <select
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                 value={roleFilter}
@@ -165,7 +180,9 @@ export function UserManagementPage() {
               {loading && <tr><td colSpan="8" className="text-center py-6 text-gray-500">Loading users…</td></tr>}
               {!loading && error && <tr><td colSpan="8" className="text-center py-6 text-red-600">{error}</td></tr>}
               {!loading && !error && filteredUsers.length === 0 && (
-                <tr><td colSpan="8" className="text-center py-6 text-gray-500">No users found.</td></tr>
+                <tr><td colSpan="8" className="text-center py-6 text-gray-500">
+                  {usersList.length ? "No users match these filters." : "No one has registered yet."}
+                </td></tr>
               )}
             </tbody>
           </table>
