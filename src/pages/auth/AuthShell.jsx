@@ -17,7 +17,7 @@ export function AuthShell({ title, subtitle, children, footer, banner }) {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8">
           {children}
         </div>
-        {footer && <p className="mt-6 text-center text-sm text-gray-600">{footer}</p>}
+        {footer && <p className="mt-6 text-center text-lg text-gray-600">{footer}</p>}
       </div>
     </div>
   );

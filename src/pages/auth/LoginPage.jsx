@@ -16,6 +16,10 @@ export function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    if (!email.trim() || !password) {
+      setError("Please enter your email and password.");
+      return;
+    }
     setLoading(true);
     try {
       await login(email, password);
@@ -34,7 +38,7 @@ export function LoginPage() {
       footer={
         <>
           Don&apos;t have an account?{" "}
-          <Link to="/register" className="font-medium text-blue-600 hover:text-blue-700">
+          <Link to="/register" className="font-bold text-blue-600 underline underline-offset-4 hover:text-blue-700">
             Register
           </Link>
         </>
@@ -71,7 +75,7 @@ export function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </Field>
-        <Button type="submit" size="lg" className="w-full" disabled={loading || !email || !password}>
+        <Button type="submit" size="lg" className="w-full py-3.5 text-xl font-semibold" disabled={loading}>
           {loading ? "Logging in…" : "Log in"}
         </Button>
       </form>

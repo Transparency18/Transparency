@@ -62,7 +62,7 @@ export function RegisterPage() {
       footer={
         <>
           Already registered?{" "}
-          <Link to="/login" className="font-medium text-blue-600 hover:text-blue-700">
+          <Link to="/login" className="font-bold text-blue-600 underline underline-offset-4 hover:text-blue-700">
             Log in
           </Link>
         </>
@@ -101,7 +101,7 @@ export function RegisterPage() {
           <input id="password" type="password" autoComplete="new-password" className={inputClass} placeholder="At least 8 characters" value={form.password} onChange={update("password")} />
         </Field>
 
-        <Button type="submit" size="lg" className="w-full" disabled={loading}>
+        <Button type="submit" size="lg" className="w-full py-3.5 text-xl font-semibold" disabled={loading}>
           {loading ? "Creating account..." : "Register"}
         </Button>
       </form>
