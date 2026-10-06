@@ -1,15 +1,16 @@
 import { ShieldCheck } from "lucide-react";
 
 // Shared centered card layout for the login and register pages.
-export function AuthShell({ title, subtitle, children, footer }) {
+export function AuthShell({ title, subtitle, children, footer, banner }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-10">
       <div className="w-full max-w-md">
+        {banner}
         <div className="flex flex-col items-center mb-6">
           <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
             <ShieldCheck className="w-6 h-6" />
           </div>
-          <h2 className="mt-2 text-3xl font-extrabold text-blue-700">URG transferancy</h2>
+          <h2 className="mt-2 text-3xl font-extrabold text-blue-700">URG Transparency</h2>
           <h1 className="mt-4 text-2xl font-semibold text-gray-900">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-gray-500">{subtitle}</p>}
         </div>

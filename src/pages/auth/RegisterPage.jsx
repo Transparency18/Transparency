@@ -4,6 +4,7 @@ import { Button } from "../../components/common/Button";
 import { phases } from "../../data/mockData";
 import { register } from "../../services/authService";
 import { AuthShell, Field, FormError, inputClass } from "./AuthShell";
+import { LaunchBanner } from "./LaunchBanner";
 
 const initialForm = { name: "", email: "", phone: "", phase: "", villaNo: "", password: "" };
 
@@ -55,6 +56,7 @@ export function RegisterPage() {
 
   return (
     <AuthShell
+      banner={<LaunchBanner />}
       title="Create your account"
       subtitle="Register as a resident"
       footer={

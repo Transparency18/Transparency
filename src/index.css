@@ -21,3 +21,35 @@
 :root {
   font-size: 80%;
 }
+
+/* Launch celebration (register page) */
+@keyframes launch-pop {
+  0% { opacity: 0; transform: scale(0.9) translateY(-12px); }
+  60% { opacity: 1; transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+@keyframes flag-swing {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+@keyframes shimmer {
+  to { background-position: 200% center; }
+}
+.launch-pop { animation: launch-pop 0.7s ease-out both; }
+.flag-swing { transform-origin: top center; animation: flag-swing 1.6s ease-in-out infinite; }
+.twinkle { animation: twinkle 1.8s ease-in-out infinite; }
+.launch-shimmer {
+  background: linear-gradient(90deg, #fff 0%, #fde047 25%, #fff 50%, #7dd3fc 75%, #fff 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 3s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .launch-pop, .flag-swing, .twinkle, .launch-shimmer { animation: none; }
+}
