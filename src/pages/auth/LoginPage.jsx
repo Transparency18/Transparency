@@ -8,7 +8,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
-  const [email, setEmail] = useState(location.state?.email || "");
+  const [phone, setPhone] = useState(location.state?.phone || "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,13 +16,13 @@ export function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!email.trim() || !password) {
-      setError("Please enter your email and password.");
+    if (!phone.trim() || !password) {
+      setError("Please enter your mobile number and password.");
       return;
     }
     setLoading(true);
     try {
-      await login(email, password);
+      await login(phone, password);
       navigate(location.state?.from || "/", { replace: true });
     } catch (err) {
       setError(err.message);
@@ -51,16 +51,16 @@ export function LoginPage() {
       )}
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <FormError message={error} />
-        <Field label="Email" htmlFor="email">
+        <Field label="Mobile number or email" htmlFor="phone">
           <input
-            id="email"
-            type="email"
-            autoComplete="email"
+            id="phone"
+            type="text"
+            autoComplete="username"
             required
             className={inputClass}
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            placeholder="9876543210"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
           />
         </Field>
         <Field label="Password" htmlFor="password">
@@ -82,3 +82,4 @@ export function LoginPage() {
     </AuthShell>
   );
 }
+

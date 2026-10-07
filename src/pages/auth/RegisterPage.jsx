@@ -11,8 +11,9 @@ const initialForm = { name: "", email: "", phone: "", phase: "", villaNo: "", pa
 function validate(form) {
   const errors = {};
   if (!form.name.trim()) errors.name = "Name is required.";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) errors.email = "Enter a valid email address.";
-  if (!/^\+?[0-9]{10,15}$/.test(form.phone.replace(/[\s-]/g, ""))) errors.phone = "Enter a valid phone number (10-15 digits).";
+  if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) errors.email = "Enter a valid email address.";
+  if (!form.phone.trim()) errors.phone = "Mobile number is required.";
+  else if (!/^\+?[0-9]{10,15}$/.test(form.phone.replace(/[\s-]/g, ""))) errors.phone = "Enter a valid phone number (10-15 digits).";
   if (!form.phase) errors.phase = "Select your phase.";
   if (!form.villaNo.trim()) errors.villaNo = "Villa number is required.";
   if (form.password.length < 8) errors.password = "Password must be at least 8 characters.";
@@ -45,7 +46,7 @@ export function RegisterPage() {
     setLoading(true);
     try {
       await register(data);
-      navigate("/login", { replace: true, state: { registered: true, email: form.email.trim() } });
+      navigate("/login", { replace: true, state: { registered: true, phone: form.phone.trim() } });
     } catch (err) {
       setFormError(err.message);
       setErrors(err.fieldErrors || {});
@@ -75,11 +76,11 @@ export function RegisterPage() {
           <input id="name" autoComplete="name" className={inputClass} value={form.name} onChange={update("name")} />
         </Field>
 
-        <Field label="Email" htmlFor="email" error={errors.email}>
+        <Field label="Email (Optional)" htmlFor="email" error={errors.email}>
           <input id="email" type="email" autoComplete="email" className={inputClass} value={form.email} onChange={update("email")} />
         </Field>
 
-        <Field label="Phone" htmlFor="phone" error={errors.phone}>
+        <Field label="Mobile number" htmlFor="phone" error={errors.phone}>
           <input id="phone" type="tel" autoComplete="tel" className={inputClass} placeholder="9876543210" value={form.phone} onChange={update("phone")} />
         </Field>
 
@@ -108,3 +109,4 @@ export function RegisterPage() {
     </AuthShell>
   );
 }
+

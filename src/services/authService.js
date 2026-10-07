@@ -30,8 +30,8 @@ export function register(formData) {
   return request("/api/auth/register", { method: "POST", body: formData });
 }
 
-export async function login(email, password) {
-  const session = await request("/api/auth/login", jsonPost({ email, password }));
+export async function login(phone, password) {
+  const session = await request("/api/auth/login", jsonPost({ phone, password }));
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   return session;
 }
@@ -67,3 +67,4 @@ export async function authRequest(path, options = {}) {
     return send(fresh.token);
   }
 }
+

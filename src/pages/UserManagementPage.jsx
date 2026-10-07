@@ -63,7 +63,7 @@ export function UserManagementPage() {
   };
 
   const handleDelete = async (u) => {
-    if (!window.confirm(`Delete ${u.name} (${u.email})? This removes their account and cannot be undone.`)) return;
+    if (!window.confirm(`Delete ${u.name} (${u.phone || u.email})? This removes their account and cannot be undone.`)) return;
     setDeletingId(u.id);
     try {
       await deleteUser(u.id);
@@ -198,7 +198,7 @@ export function UserManagementPage() {
                   </td>
                   <td className="py-3 px-6 text-sm">{phases.find(p => p.id === u.phase)?.name || u.phase || '-'}</td>
                   <td className="py-3 px-6 text-sm">{u.villa_no || '-'}</td>
-                  <td className="py-3 px-6 text-sm">{u.email}</td>
+                  <td className="py-3 px-6 text-sm">{u.email || '-'}</td>
                   <td className="py-3 px-6 text-sm">{u.phone || '-'}</td>
                   <td className="py-3 px-6 text-sm text-gray-500 whitespace-nowrap">{format(new Date(u.created_at), 'dd MMM yyyy')}</td>
                   <td className="py-3 px-6 text-right">

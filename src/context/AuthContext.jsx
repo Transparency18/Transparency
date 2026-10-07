@@ -39,8 +39,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('Transparency_demo_sector', sector);
   }, [sector]);
 
-  const login = async (email, password) => {
-    const newSession = await apiLogin(email, password);
+  const login = async (phone, password) => {
+    const newSession = await apiLogin(phone, password);
     setSession(newSession);
     return newSession;
   };
@@ -58,3 +58,4 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
+
