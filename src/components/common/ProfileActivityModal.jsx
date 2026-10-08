@@ -12,13 +12,10 @@ export function ProfileActivityModal({ isOpen, onClose, userName, role }) {
 
   useEffect(() => {
     if (isOpen) {
-      // Mocked analysis fetching based on user's name or role
       const allIssues = localDb.getSecurityIssues();
       const allVisitors = localDb.getVisitors();
       const allPayments = localDb.getPayments();
 
-      // In a real app, these would be filtered by userId. 
-      // For demo, we just loosely filter or show demo stats if none exist.
       setActivities({
         issuesReported: allIssues,
         visitorsHosted: allVisitors,
@@ -70,17 +67,8 @@ export function ProfileActivityModal({ isOpen, onClose, userName, role }) {
           </h3>
           <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-200 before:to-transparent">
             
-            {/* If there's no data, show some dummy activities to make the demo look good, otherwise map actual data */}
             {activities.issuesReported.length === 0 && activities.visitorsHosted.length === 0 ? (
-              <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-gray-100 text-gray-500 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
-                  <Activity className="w-4 h-4" />
-                </div>
-                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded border border-gray-200 shadow">
-                  <p className="text-sm text-gray-500 mb-1">Just now</p>
-                  <p className="text-gray-900 font-medium text-sm">Logged into Dashboard</p>
-                </div>
-              </div>
+              <p className="relative text-center text-sm text-gray-500 py-4">No activity yet.</p>
             ) : (
               <>
                 {activities.issuesReported.slice(0, 2).map((issue, i) => (

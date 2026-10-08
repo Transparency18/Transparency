@@ -1,5 +1,4 @@
-// Initialize local storage empty, without mock data for demo purposes.
-// Only setting up default structural data like phases so dropdowns work.
+// Phases are structural data (used by dropdowns), not demo data.
 const defaultPhases = [
   { id: 'p1', name: 'Phase 1' },
   { id: 'p2', name: 'Phase 2' },
@@ -10,104 +9,22 @@ const defaultPhases = [
   { id: 's2', name: 'Sector 2' },
 ];
 
+// Every list starts empty; data comes only from what users add.
+// Changing DB_VERSION_KEY wipes older browser copies (which held demo data).
+const DB_VERSION_KEY = 'Transparency_db_v19_initialized';
+const COLLECTIONS = [
+  'cameras', 'securityIssues', 'visitors', 'payments', 'expenses', 'announcements',
+  'infrastructure', 'vehicles', 'patrols', 'guards', 'committee', 'serviceProviders',
+  'closedHouses', 'businesses', 'users',
+];
+
 const initializeDb = () => {
-  if (!localStorage.getItem('Transparency_demo_v18_initialized')) {
+  if (!localStorage.getItem(DB_VERSION_KEY)) {
+    localStorage.removeItem('Transparency_demo_v18_initialized');
+    localStorage.removeItem('dashboardStats');
     localStorage.setItem('phases', JSON.stringify(defaultPhases));
-
-    // Add some dummy data so dashboard isn't completely empty
-    // Generate 30 street lights
-    const dummyInfrastructure = Array.from({ length: 30 }, (_, i) => ({
-      id: `INF-${100 + i}`,
-      name: `Street Light ${i + 1}`,
-      type: 'Streetlight',
-      phase: i < 10 ? 'p1' : i < 20 ? 'p2' : 'p3',
-      location: `Pole ${i + 1}`,
-      status: i < 27 ? 'Working' : 'Faulty'
-    }));
-
-    const dummyExpenses = Array.from({ length: 12 }, (_, i) => ({
-      id: `EXP-${1000 + i}`, title: `Maintenance Work ${i + 1}`, category: i % 2 === 0 ? 'Maintenance' : 'Repairs', amount: 5000 + (i * 1500), date: new Date().toISOString().split('T')[0], phase: i < 5 ? 'p1' : 'p2', approvedBy: 'Admin'
-    }));
-
-    const indianNames = ['Aarav Patel', 'Diya Sharma', 'Rohan Verma', 'Ananya Gupta', 'Vikram Singh', 'Priya Reddy', 'Arjun Kumar', 'Kavya Rao', 'Siddharth Desai', 'Neha Joshi', 'Aditya Iyer', 'Pooja Nair', 'Karan Mehta', 'Riya Chawla', 'Rahul Menon'];
-
-    const dummyPayments = Array.from({ length: 15 }, (_, i) => ({
-      id: `PAY-${1000 + i}`, houseId: `A-${100 + i}`, type: 'Maintenance', amount: 3500, date: new Date().toISOString().split('T')[0], status: i % 3 === 0 ? 'Pending' : 'Paid', phase: i < 7 ? 'p1' : 'p2', residentName: indianNames[i % indianNames.length]
-    }));
-
-    const dummyPatrols = Array.from({ length: 10 }, (_, i) => ({
-      id: `PAT-${1000 + i}`, guard: i % 2 === 0 ? 'Ramu' : 'Shyam', route: `Route ${i + 1}`, status: i === 9 ? 'Missed / Incomplete' : 'Completed', date: new Date().toISOString().split('T')[0], startTime: `${10 + i}:00`, endTime: `${11 + i}:00`, phase: i < 5 ? 'p1' : 'p2'
-    }));
-
-    // Generate 40 cameras: 35 working, 5 faulty
-    const dummyCameras = Array.from({ length: 40 }, (_, i) => ({
-      id: `CAM-${String(i + 1).padStart(3, '0')}`,
-      name: `Camera ${i + 1}`,
-      location: `Location ${i + 1}`,
-      type: i % 2 === 0 ? 'Bullet' : 'Dome',
-      status: i < 35 ? 'Working' : 'Not Working',
-      phase: i < 15 ? 'p1' : i < 25 ? 'p2' : 'p3'
-    }));
-
-    const dummyIssues = Array.from({ length: 10 }, (_, i) => ({
-      id: `ISS-${101 + i}`, category: i % 2 === 0 ? 'Suspicious Activity' : 'Infrastructure', description: `Issue report ${i + 1}`, priority: i % 3 === 0 ? 'High' : 'Normal', status: i < 3 ? 'Open' : (i < 6 ? 'In Progress' : 'Resolved'), phase: i < 5 ? 'p1' : 'p2', reportedBy: 'Admin', date: new Date().toISOString().split('T')[0]
-    }));
-
-    const dummyVisitors = Array.from({ length: 12 }, (_, i) => ({
-      id: `V-${1000 + i}`, name: `Visitor ${i + 1}`, mobile: `987654321${i}`, hostHouse: `A-${101 + i}`, purpose: i % 2 === 0 ? 'Delivery' : 'Guest', vehicleNumber: i % 3 === 0 ? '' : `KA-01-AB-123${i}`, gate: 'Main gate', phase: i < 6 ? 'p1' : 'p2', sector: 's2', entryTime: `10:${10 + i}`, exitTime: i < 5 ? null : `11:${10 + i}`, status: i < 5 ? 'Inside' : (i === 11 ? 'Pre-approved' : 'Exited')
-    }));
-
-    const dummyAnnouncements = Array.from({ length: 10 }, (_, i) => ({
-      id: `ANN-${101 + i}`, title: `Announcement ${i + 1}`, content: `This is the detailed content for announcement ${i + 1}.`, target: i % 2 === 0 ? 'All Residents' : 'Phase 1 Only', priority: i % 3 === 0 ? 'High' : 'Normal', date: new Date().toISOString()
-    }));
-
-    const dummyVehicles = Array.from({ length: 12 }, (_, i) => ({
-      id: `VEH-${1000 + i}`, owner: `Owner ${i + 1}`, houseId: `A-${101 + i}`, type: i % 2 === 0 ? 'Car' : 'Two-Wheeler', number: `KA-0${i}-XY-123${i}`, makeModel: i % 2 === 0 ? 'Honda City' : 'Activa', phase: i < 6 ? 'p1' : 'p2', sector: 's2', date: new Date().toISOString().split('T')[0]
-    }));
-
-    const dummyCommittee = Array.from({ length: 10 }, (_, i) => ({
-      id: `COM-${101 + i}`, name: `Committee Member ${i + 1}`, role: i === 0 ? 'President' : (i === 1 ? 'Secretary' : 'Member'), contact: `998877665${i}`, phase: i < 5 ? 'p1' : 'p2', sector: 's2'
-    }));
-
-    const dummyServiceProviders = [
-      { id: 'SRV-101', name: 'Ramesh (Tank Cleaner)', serviceType: 'Tank Cleaner', contact: '9876543210', verified: true, phase: 'All' },
-      { id: 'SRV-102', name: 'Suresh (Garden Cleaning)', serviceType: 'Garden Cleaning', contact: '9876543211', verified: true, phase: 'All' },
-      { id: 'SRV-103', name: 'Mahesh (Electrician)', serviceType: 'Electrician', contact: '9876543212', verified: true, phase: 'All' },
-      { id: 'SRV-104', name: 'Kamlesh (Plumber)', serviceType: 'Plumber', contact: '9876543213', verified: false, phase: 'All' },
-      { id: 'SRV-105', name: 'Gita (Maid)', serviceType: 'Maid', contact: '9876543214', verified: true, phase: 'All' }
-    ];
-
-    localStorage.setItem('cameras', JSON.stringify(dummyCameras));
-    localStorage.setItem('securityIssues', JSON.stringify(dummyIssues));
-    localStorage.setItem('visitors', JSON.stringify(dummyVisitors));
-    localStorage.setItem('payments', JSON.stringify(dummyPayments));
-    localStorage.setItem('expenses', JSON.stringify(dummyExpenses));
-    localStorage.setItem('announcements', JSON.stringify(dummyAnnouncements));
-    localStorage.setItem('infrastructure', JSON.stringify(dummyInfrastructure));
-    localStorage.setItem('vehicles', JSON.stringify(dummyVehicles));
-    localStorage.setItem('patrols', JSON.stringify(dummyPatrols));
-    localStorage.setItem('guards', JSON.stringify([])); // Deprecated
-    localStorage.setItem('committee', JSON.stringify(dummyCommittee));
-    localStorage.setItem('serviceProviders', JSON.stringify(dummyServiceProviders));
-    localStorage.setItem('closedHouses', JSON.stringify([]));
-    localStorage.setItem('businesses', JSON.stringify([]));
-    localStorage.setItem('dashboardStats', JSON.stringify({}));
-    const dummyUsers = Array.from({ length: 25 }, (_, i) => {
-      const name = indianNames[(i + 15) % indianNames.length];
-      return {
-        id: `USR-${101 + i}`,
-        name: name,
-        email: `${name.split(' ')[0].toLowerCase()}@example.com`,
-        role: i < 2 ? 'Volunteer' : (i < 12 ? 'Guard' : 'Resident'),
-        phase: i % 2 === 0 ? 'p1' : 'p2',
-        sector: 's2',
-        contact: `987654321${i}`,
-        shift: (i >= 2 && i < 12) ? (i % 2 === 0 ? 'Day' : 'Night') : undefined
-      };
-    });
-
-    localStorage.setItem('users', JSON.stringify(dummyUsers));
-    localStorage.setItem('Transparency_demo_v18_initialized', 'true');
+    COLLECTIONS.forEach((key) => localStorage.setItem(key, JSON.stringify([])));
+    localStorage.setItem(DB_VERSION_KEY, 'true');
   }
 };
 
@@ -363,7 +280,7 @@ export const localDb = {
     }
 
     const cctvTrend = cameras.length === 0
-      ? [{ name: 'No of Cameras', value: 1, color: '#e5e7eb' }]
+      ? [{ name: 'No cameras added yet', value: 1, color: '#e5e7eb', placeholder: true }]
       : [
         { name: 'Working', value: workingCameras, color: '#22c55e' },
         { name: 'Faulty', value: faultyCameras, color: '#ef4444' },

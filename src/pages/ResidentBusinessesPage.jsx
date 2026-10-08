@@ -12,7 +12,7 @@ export function ResidentBusinessesPage() {
   const [businesses, setBusinesses] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', category: 'Tuition', openTime: '09:00', closeTime: '18:00', description: '' });
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -23,8 +23,8 @@ export function ResidentBusinessesPage() {
     e.preventDefault();
     localDb.addBusiness({
       ...formData,
-      owner: 'Current Resident', // Auto-filled mock
-      houseId: 'A-101 (Auto-detected)', // Auto-filled mock
+      owner: user?.name || 'Resident',
+      houseId: user?.villa_no || '-',
     });
     setBusinesses(localDb.getBusinesses());
     setIsModalOpen(false);
