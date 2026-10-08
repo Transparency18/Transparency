@@ -14,7 +14,7 @@ const jsonBody = (method, body) => ({
   body: JSON.stringify(body),
 });
 
-// Members get their own complaints; guards and volunteers get all.
+// Members get their phase's complaints (plus their own); guards and volunteers get all.
 export async function getComplaints() {
   const { complaints } = await authRequest("/api/complaints");
   return complaints;

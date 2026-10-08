@@ -37,7 +37,7 @@ export function SecurityPage() {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [view, setView] = useState("all"); // staff: "all" | "mine"
+  const [view, setView] = useState("all"); // "all" | "mine"
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("Active");
   const [priorityFilter, setPriorityFilter] = useState("All");
@@ -138,8 +138,8 @@ export function SecurityPage() {
     }
   };
 
-  // Members only ever receive their own complaints from the API.
-  const scoped = isStaff && view === "mine" ? complaints.filter(c => c.reported_by === user?.id) : complaints;
+  // Members receive only their phase's complaints (plus their own) from the API.
+  const scoped = view === "mine" ? complaints.filter(c => c.reported_by === user?.id) : complaints;
   const query = searchTerm.trim().toLowerCase();
   const filtered = scoped.filter(c => {
     const matchesSearch = !query || [c.category, c.description, c.location, c.reporter_name, c.reporter_villa, `#${c.ticket_no}`]
@@ -166,7 +166,7 @@ export function SecurityPage() {
           <h2 className="text-2xl font-bold text-gray-900">Complaints</h2>
           <p className="text-gray-500 mt-1">
             {isMember
-              ? "Report an issue and track what's being done about it"
+              ? `Issues reported in ${phaseName(user?.phase)}: report one and track what's being done`
               : "Track, respond to and resolve issues reported in the community"}
           </p>
         </div>
@@ -194,20 +194,20 @@ export function SecurityPage() {
         <CardHeader className="pb-4">
           <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-3">
             <div className="flex items-center gap-3">
-              <CardTitle>{isMember ? "My Complaints" : view === "mine" ? "Reported by Me" : "All Complaints"}</CardTitle>
-              {isStaff && (
-                <div className="flex rounded-lg border border-gray-200 p-0.5 text-sm">
-                  {[["all", "All"], ["mine", "Mine"]].map(([key, label]) => (
-                    <button
-                      key={key}
-                      onClick={() => setView(key)}
-                      className={`px-3 py-1 rounded-md font-medium ${view === key ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <CardTitle>
+                {view === "mine" ? "Reported by Me" : isMember ? `${phaseName(user?.phase)} Complaints` : "All Complaints"}
+              </CardTitle>
+              <div className="flex rounded-lg border border-gray-200 p-0.5 text-sm">
+                {[["all", "All"], ["mine", "Mine"]].map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setView(key)}
+                    className={`px-3 py-1 rounded-md font-medium ${view === key ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative">
@@ -245,7 +245,7 @@ export function SecurityPage() {
           {!loading && !loadError && filtered.length === 0 && (
             <p className="py-10 text-center text-gray-500">
               {scoped.length === 0
-                ? (isMember ? "You haven't reported any issues yet." : "No complaints have been reported yet.")
+                ? (view === "mine" ? "You haven't reported any issues yet." : isMember ? "No complaints in your phase yet." : "No complaints have been reported yet.")
                 : "No complaints match these filters."}
             </p>
           )}
