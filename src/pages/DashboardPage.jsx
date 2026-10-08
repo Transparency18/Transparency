@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/common/C
 import { dashboardService } from "../services/dashboardService";
 import { Badge } from "../components/common/Badge";
 import { useAuth } from "../context/AuthContext";
+import { phases } from "../data/mockData";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -24,13 +25,13 @@ export function DashboardPage() {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        const [statsData, issuesData, announcementsData] = await Promise.all([
+        const [statsData, complaintSummary, announcementsData] = await Promise.all([
           dashboardService.getStats(phase),
-          dashboardService.getRecentIssues(phase),
+          dashboardService.getComplaintSummary(phase).catch(() => ({ activeCount: 0, recent: [] })),
           dashboardService.getAnnouncements()
         ]);
-        setStats(statsData);
-        setRecentIssues(issuesData);
+        setStats({ ...statsData, activeSecurityIssues: complaintSummary.activeCount });
+        setRecentIssues(complaintSummary.recent);
         setRecentAnnouncements(announcementsData);
       } catch (error) {
         console.error("Failed to load dashboard stats", error);
@@ -158,20 +159,23 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Issues</CardTitle>
+            <CardTitle><Link to="/security" className="hover:text-blue-700">Recent Complaints</Link></CardTitle>
             <Badge variant="danger">Active: {stats.activeSecurityIssues}</Badge>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
               {recentIssues.length === 0 ? (
-                <div className="p-4 text-center text-gray-500 text-sm">No recent issues found.</div>
+                <div className="p-4 text-center text-gray-500 text-sm">No complaints reported yet.</div>
               ) : (
                 recentIssues.map(issue => (
                   <div key={issue.id} className="p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h5 className="font-medium text-gray-900">{issue.description || issue.category}</h5>
-                        <p className="text-sm text-gray-500 mt-1">{issue.phase} • Reported by {issue.reportedBy}</p>
+                        <h5 className="font-medium text-gray-900">#{issue.ticket_no} {issue.category}</h5>
+                        <p className="text-sm text-gray-600 mt-0.5 line-clamp-1">{issue.description}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {phases.find(p => p.id === issue.phase)?.name || issue.phase} • Reported by {issue.reporter_name}
+                        </p>
                       </div>
                       {getStatusBadge(issue.status)}
                     </div>

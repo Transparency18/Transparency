@@ -1,341 +1,396 @@
 import { useState, useEffect } from "react";
-import { localDb } from "../services/localDb";
+import { formatDistanceToNow, format } from "date-fns";
 import { phases } from "../data/mockData";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/common/Card";
 import { Badge } from "../components/common/Badge";
 import { Button } from "../components/common/Button";
 import { Modal } from "../components/common/Modal";
-import { MessageSquare, Search, Plus, AlertTriangle, CheckCircle, Clock, ShieldAlert, Trash2 } from "lucide-react";
+import { MessageSquare, Search, Plus, AlertTriangle, CheckCircle, Clock, ShieldAlert, Trash2, MapPin, RefreshCw } from "lucide-react";
 import { useAuth, ROLES } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
+import {
+  COMPLAINT_CATEGORIES, COMPLAINT_PRIORITIES, COMPLAINT_STATUSES,
+  getComplaints, createComplaint, updateComplaint, deleteComplaint,
+} from "../services/complaintService";
+
+// Statuses each role can set (matches the backend rules).
+const STATUS_OPTIONS = {
+  [ROLES.GUARD]: ["Open", "In Progress", "Resolved"],
+  [ROLES.VOLUNTEER]: COMPLAINT_STATUSES,
+};
+const STATUS_BADGE = { "Open": "danger", "In Progress": "warning", "Resolved": "success", "Closed": "default" };
+const PRIORITY_BADGE = { High: "danger", Medium: "warning", Low: "info" };
+const ROLE_LABEL = { member: "Member", guard: "Security Guard", volunteer: "Volunteer" };
+
+const inputClass = "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white";
+const phaseName = (id) => phases.find(p => p.id === id)?.name || id;
 
 export function SecurityPage() {
-  const { phase, role } = useAuth();
-  const [issues, setIssues] = useState([]);
-  const [patrols, setPatrols] = useState([]);
+  const { role, user, logout } = useAuth();
+  const { addToast } = useToast();
+  const isMember = role === ROLES.MEMBER;
+  const isVolunteer = role === ROLES.VOLUNTEER;
+  const isStaff = !isMember;
+
+  const emptyForm = { category: "", priority: "Medium", phase: user?.phase || "", location: "", description: "" };
+
+  const [complaints, setComplaints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [view, setView] = useState("all"); // staff: "all" | "mine"
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("Active");
   const [priorityFilter, setPriorityFilter] = useState("All");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    category: 'Suspicious Activity', description: '', phase: 'p1', priority: 'Medium', reportedBy: 'Admin'
-  });
-  const [replyModalOpen, setReplyModalOpen] = useState(false);
+  const [phaseFilter, setPhaseFilter] = useState("All");
+
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [formErrors, setFormErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const [replyTarget, setReplyTarget] = useState(null);
   const [replyText, setReplyText] = useState("");
-  const [replyIssueId, setReplyIssueId] = useState(null);
+  const [busyId, setBusyId] = useState(null);
 
-  useEffect(() => {
-    setIssues(localDb.getSecurityIssues());
-    setPatrols(localDb.getPatrols());
-  }, []);
-
-  const handleReportIssue = (e) => {
-    e.preventDefault();
-    const newIssue = {
-      ...formData,
-      status: 'Open',
-      date: new Date().toISOString().split('T')[0]
-    };
-    localDb.addSecurityIssue(newIssue);
-    setIssues(localDb.getSecurityIssues());
-    setIsModalOpen(false);
-    setFormData({ category: 'Suspicious Activity', description: '', phase: 'p1', priority: 'Medium', reportedBy: 'Admin' });
+  const handleError = (err) => {
+    if (err.status === 401) return logout();
+    addToast(err.message, "error");
   };
 
-  const handleUpdateStatus = (id, newStatus) => {
-    localDb.updateSecurityIssue(id, { status: newStatus });
-    setIssues(localDb.getSecurityIssues());
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this issue?")) {
-      localDb.deleteSecurityIssue(id);
-      setIssues(localDb.getSecurityIssues());
+  const loadComplaints = async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      setComplaints(await getComplaints());
+    } catch (err) {
+      if (err.status === 401) return logout();
+      setLoadError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
-  const handleReplySubmit = (e) => {
+
+  useEffect(() => {
+    loadComplaints();
+    const reloadOnReturn = () => document.visibilityState === "visible" && loadComplaints();
+    document.addEventListener("visibilitychange", reloadOnReturn);
+    return () => document.removeEventListener("visibilitychange", reloadOnReturn);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const replaceComplaint = (updated) =>
+    setComplaints(prev => prev.map(c => (c.id === updated.id ? updated : c)));
+
+  const handleReport = async (e) => {
     e.preventDefault();
-    localDb.updateSecurityIssue(replyIssueId, { volunteerReply: replyText });
-    setIssues(localDb.getSecurityIssues());
-    setReplyModalOpen(false);
-    setReplyText("");
-    setReplyIssueId(null);
+    const errors = {};
+    if (!form.category) errors.category = "Select a category.";
+    if (isStaff && !form.phase) errors.phase = "Select a phase.";
+    if (form.description.trim().length < 5) errors.description = "Describe the issue (at least 5 characters).";
+    setFormErrors(errors);
+    if (Object.keys(errors).length) return;
+
+    setSubmitting(true);
+    try {
+      const created = await createComplaint({ ...form, description: form.description.trim(), location: form.location.trim() });
+      setComplaints(prev => [created, ...prev]);
+      setIsReportOpen(false);
+      setForm(emptyForm);
+      addToast(`Complaint #${created.ticket_no} submitted.`, "success");
+    } catch (err) {
+      setFormErrors(err.fieldErrors || {});
+      handleError(err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const filteredIssues = issues.filter((issue) => {
-    const matchesSearch = issue.category.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          issue.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "All" || issue.status === statusFilter;
-    const matchesPriority = priorityFilter === "All" || issue.priority === priorityFilter;
-    const matchesPhase = phase === "All" || issue.phase === phase;
+  const handleChange = async (c, changes, message) => {
+    setBusyId(c.id);
+    try {
+      replaceComplaint(await updateComplaint(c.id, changes));
+      if (message) addToast(message, "success");
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleReplySubmit = async (e) => {
+    e.preventDefault();
+    await handleChange(replyTarget, { reply: replyText }, "Reply saved.");
+    setReplyTarget(null);
+    setReplyText("");
+  };
+
+  const handleDelete = async (c) => {
+    if (!window.confirm(`Delete complaint #${c.ticket_no} (${c.category})? This cannot be undone.`)) return;
+    setBusyId(c.id);
+    try {
+      await deleteComplaint(c.id);
+      setComplaints(prev => prev.filter(x => x.id !== c.id));
+      addToast(`Complaint #${c.ticket_no} deleted.`, "success");
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // Members only ever receive their own complaints from the API.
+  const scoped = isStaff && view === "mine" ? complaints.filter(c => c.reported_by === user?.id) : complaints;
+  const query = searchTerm.trim().toLowerCase();
+  const filtered = scoped.filter(c => {
+    const matchesSearch = !query || [c.category, c.description, c.location, c.reporter_name, c.reporter_villa, `#${c.ticket_no}`]
+      .some(v => v && String(v).toLowerCase().includes(query));
+    const matchesStatus = statusFilter === "All"
+      || (statusFilter === "Active" ? ["Open", "In Progress"].includes(c.status) : c.status === statusFilter);
+    const matchesPriority = priorityFilter === "All" || c.priority === priorityFilter;
+    const matchesPhase = phaseFilter === "All" || c.phase === phaseFilter;
     return matchesSearch && matchesStatus && matchesPriority && matchesPhase;
   });
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "Open": return <Badge variant="danger">Open</Badge>;
-      case "In Progress": return <Badge variant="warning">In Progress</Badge>;
-      case "Resolved": return <Badge variant="success">Resolved</Badge>;
-      case "Closed": return <Badge variant="default">Closed</Badge>;
-      default: return <Badge>{status}</Badge>;
-    }
-  };
-
-  const getPriorityBadge = (priority) => {
-    switch (priority) {
-      case "High": return <Badge variant="danger" className="text-[10px]">High</Badge>;
-      case "Medium": return <Badge variant="warning" className="text-[10px]">Medium</Badge>;
-      case "Low": return <Badge variant="info" className="text-[10px]">Low</Badge>;
-      default: return <Badge className="text-[10px]">{priority}</Badge>;
-    }
-  };
-
-  const openCount = issues.filter(i => i.status === "Open" || i.status === "In Progress").length;
-  const resolvedCount = issues.filter(i => i.status === "Resolved" || i.status === "Closed").length;
+  const count = (statuses) => scoped.filter(c => statuses.includes(c.status)).length;
+  const stats = [
+    { label: "Open", value: count(["Open"]), icon: AlertTriangle, tone: "bg-red-100 text-red-600" },
+    { label: "In Progress", value: count(["In Progress"]), icon: Clock, tone: "bg-orange-100 text-orange-600" },
+    { label: "Resolved", value: count(["Resolved", "Closed"]), icon: CheckCircle, tone: "bg-green-100 text-green-600" },
+    { label: "Total Reported", value: scoped.length, icon: ShieldAlert, tone: "bg-blue-100 text-blue-600" },
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Complains</h2>
-          <p className="text-gray-500 mt-1">Track and resolve issues and incidents</p>
+          <h2 className="text-2xl font-bold text-gray-900">Complaints</h2>
+          <p className="text-gray-500 mt-1">
+            {isMember
+              ? "Report an issue and track what's being done about it"
+              : "Track, respond to and resolve issues reported in the community"}
+          </p>
         </div>
-        <Button icon={Plus} onClick={() => setIsModalOpen(true)}>Report Issue</Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" icon={RefreshCw} onClick={loadComplaints} disabled={loading}>Refresh</Button>
+          <Button icon={Plus} onClick={() => { setForm(emptyForm); setFormErrors({}); setIsReportOpen(true); }}>Report Issue</Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center space-x-4">
-            <div className="p-3 bg-red-100 rounded-lg text-red-600">
-              <AlertTriangle className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Active Issues</p>
-              <h3 className="text-2xl font-bold text-gray-900">{openCount}</h3>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center space-x-4">
-            <div className="p-3 bg-blue-100 rounded-lg text-blue-600">
-              <ShieldAlert className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Total Reported</p>
-              <h3 className="text-2xl font-bold text-gray-900">{issues.length}</h3>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center space-x-4">
-            <div className="p-3 bg-green-100 rounded-lg text-green-600">
-              <CheckCircle className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Resolved</p>
-              <h3 className="text-2xl font-bold text-gray-900">{resolvedCount}</h3>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center space-x-4">
-            <div className="p-3 bg-purple-100 rounded-lg text-purple-600">
-              <ShieldAlert className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Patrol Rounds</p>
-              <h3 className="text-2xl font-bold text-gray-900">
-                {patrols.filter(p => p.status === 'Completed').length}/{patrols.length}
-              </h3>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {stats.map(s => (
+          <Card key={s.label}>
+            <CardContent className="p-4 flex items-center space-x-4">
+              <div className={`p-3 rounded-lg ${s.tone}`}><s.icon className="w-6 h-6" /></div>
+              <div>
+                <p className="text-sm text-gray-500 font-medium">{s.label}</p>
+                <h3 className="text-2xl font-bold text-gray-900">{s.value}</h3>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0">
-            <CardTitle>Security Issues & Incidents</CardTitle>
-            <div className="flex space-x-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-              <div className="relative w-full md:w-64 flex-shrink-0">
-                <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
-                <input 
+          <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-3">
+            <div className="flex items-center gap-3">
+              <CardTitle>{isMember ? "My Complaints" : view === "mine" ? "Reported by Me" : "All Complaints"}</CardTitle>
+              {isStaff && (
+                <div className="flex rounded-lg border border-gray-200 p-0.5 text-sm">
+                  {[["all", "All"], ["mine", "Mine"]].map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setView(key)}
+                      className={`px-3 py-1 rounded-md font-medium ${view === key ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
                   type="text"
-                  placeholder="Search issues..."
-                  className="pl-9 pr-4 py-2 w-full border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Search #, category, villa, name"
+                  className={`${inputClass} pl-9 sm:w-60`}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <select 
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white flex-shrink-0"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
+              <select className={inputClass} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="Active">Open + In Progress</option>
                 <option value="All">All Status</option>
-                <option value="Open">Open</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Resolved">Resolved</option>
+                {COMPLAINT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <select 
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white flex-shrink-0"
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-              >
+              <select className={inputClass} value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
                 <option value="All">All Priorities</option>
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Low">Low</option>
+                {COMPLAINT_PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
+              {isStaff && (
+                <select className={inputClass} value={phaseFilter} onChange={(e) => setPhaseFilter(e.target.value)}>
+                  <option value="All">All Phases</option>
+                  {phases.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              )}
             </div>
           </div>
         </CardHeader>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-max">
-            <thead>
-              <tr className="bg-gray-50 border-y border-gray-200">
-                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Issue Details</th>
-                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Location / Phase</th>
-                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Reported Info</th>
-                <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status & Priority</th>
-                {role !== ROLES.MEMBER && <th className="py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredIssues.map((issue) => {
-                const phase = phases.find(p => p.id === issue.phase);
-                return (
-                  <tr key={issue.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-4 px-6">
-                      <div className="font-medium text-gray-900">{issue.category}</div>
-                      <div className="text-sm text-gray-500 mt-1 max-w-xs truncate" title={issue.description}>
-                        {issue.description}
-                      </div>
-                      {issue.volunteerReply && (
-                        <div className="mt-2 bg-blue-50 border-l-2 border-blue-500 p-2 text-xs text-gray-700 rounded-r">
-                          <span className="font-semibold text-blue-800">Reply: </span>
-                          {issue.volunteerReply}
-                        </div>
-                      )}
-                      <div className="text-xs text-gray-400 mt-1">{issue.id}</div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="text-gray-900 font-medium">
-                        {phase?.name}
-                        
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="text-sm text-gray-900">{issue.reportedBy}</div>
-                      <div className="text-xs text-gray-500 flex items-center mt-1">
-                        <Clock className="w-3 h-3 mr-1" /> {issue.date}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex flex-col items-start space-y-2">
-                        {getStatusBadge(issue.status)}
-                        {getPriorityBadge(issue.priority)}
-                      </div>
-                    </td>
-                    {role !== ROLES.MEMBER && (
-                      <td className="py-4 px-6 text-right whitespace-nowrap">
-                        {issue.status !== "Resolved" && (
-                          <select 
-                            className="text-sm border border-gray-300 rounded-md px-2 py-1 mr-2"
-                            onChange={(e) => handleUpdateStatus(issue.id, e.target.value)}
-                            value={issue.status}
-                          >
-                            <option value="Open">Open</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Resolved">Resolved</option>
-                          </select>
-                        )}
-                        {(role === ROLES.VOLUNTEER || role === ROLES.GUARD) && (
-                           <button
-                             onClick={() => { setReplyIssueId(issue.id); setReplyText(issue.volunteerReply || ""); setReplyModalOpen(true); }}
-                             className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors inline-flex align-middle mr-2"
-                             title="Reply"
-                           >
-                             <MessageSquare className="w-4 h-4" />
-                           </button>
-                        )}
-                        <button 
-                          onClick={() => handleDelete(issue.id)}
-                          className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors inline-flex align-middle"
-                          title="Delete Issue"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
+
+        <div className="divide-y divide-gray-100">
+          {loading && <p className="py-10 text-center text-gray-500">Loading complaints…</p>}
+          {!loading && loadError && <p className="py-10 text-center text-red-600">{loadError}</p>}
+          {!loading && !loadError && filtered.length === 0 && (
+            <p className="py-10 text-center text-gray-500">
+              {scoped.length === 0
+                ? (isMember ? "You haven't reported any issues yet." : "No complaints have been reported yet.")
+                : "No complaints match these filters."}
+            </p>
+          )}
+
+          {!loading && !loadError && filtered.map(c => (
+            <div key={c.id} className="p-4 sm:px-6 hover:bg-gray-50 transition-colors">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-mono text-gray-400">#{c.ticket_no}</span>
+                    <span className="font-semibold text-gray-900">{c.category}</span>
+                    <Badge variant={STATUS_BADGE[c.status]}>{c.status}</Badge>
+                    <Badge variant={PRIORITY_BADGE[c.priority]} className="text-[10px]">{c.priority}</Badge>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-700 whitespace-pre-line break-words">{c.description}</p>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                    <span className="inline-flex items-center"><MapPin className="w-3 h-3 mr-1" />{phaseName(c.phase)}{c.location ? ` · ${c.location}` : ""}</span>
+                    <span>
+                      By {c.reported_by === user?.id ? "you" : c.reporter_name}
+                      {c.reporter_villa ? ` (Villa ${c.reporter_villa})` : ""} · {ROLE_LABEL[c.reporter_role] || c.reporter_role}
+                    </span>
+                    <span className="inline-flex items-center" title={format(new Date(c.created_at), "dd MMM yyyy, h:mm a")}>
+                      <Clock className="w-3 h-3 mr-1" />{formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
+                  {c.reply && (
+                    <div className="mt-3 bg-blue-50 border-l-2 border-blue-500 p-2.5 text-sm text-gray-700 rounded-r">
+                      <span className="font-semibold text-blue-800">{c.replied_by_name || "Reply"}: </span>
+                      {c.reply}
+                    </div>
+                  )}
+                </div>
+
+                {isStaff && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <select
+                      aria-label="Status"
+                      className="text-sm border border-gray-300 rounded-md px-2 py-1.5 bg-white disabled:opacity-50"
+                      value={c.status}
+                      disabled={busyId === c.id || (!isVolunteer && c.status === "Closed")}
+                      onChange={(e) => handleChange(c, { status: e.target.value }, `#${c.ticket_no} marked ${e.target.value}.`)}
+                    >
+                      {(STATUS_OPTIONS[role].includes(c.status) ? STATUS_OPTIONS[role] : [c.status, ...STATUS_OPTIONS[role]])
+                        .map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    {isVolunteer && (
+                      <select
+                        aria-label="Priority"
+                        className="text-sm border border-gray-300 rounded-md px-2 py-1.5 bg-white disabled:opacity-50"
+                        value={c.priority}
+                        disabled={busyId === c.id}
+                        onChange={(e) => handleChange(c, { priority: e.target.value }, `#${c.ticket_no} priority set to ${e.target.value}.`)}
+                      >
+                        {COMPLAINT_PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
                     )}
-                  </tr>
-                )
-              })}
-              {filteredIssues.length === 0 && (
-                <tr>
-                  <td colSpan={role !== ROLES.MEMBER ? "5" : "4"} className="py-8 text-center text-gray-500">
-                    No security issues found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    <button
+                      onClick={() => { setReplyTarget(c); setReplyText(c.reply || ""); }}
+                      disabled={busyId === c.id}
+                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
+                      title={c.reply ? "Edit reply" : "Reply"}
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                    </button>
+                    {isVolunteer && (
+                      <button
+                        onClick={() => handleDelete(c)}
+                        disabled={busyId === c.id}
+                        className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                        title="Delete complaint"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </Card>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Report Security Issue">
-        <form onSubmit={handleReportIssue} className="space-y-4">
+      <Modal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} title="Report an Issue">
+        <form onSubmit={handleReport} className="space-y-4" noValidate>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">Category *</label>
-              <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                <option value="Suspicious Activity">Suspicious Activity</option>
-                <option value="Trespassing">Trespassing</option>
-                <option value="Vandalism">Vandalism</option>
-                <option value="Infrastructure Damage">Infrastructure Damage</option>
-                <option value="CCTV / Camera Fault">CCTV / Camera Fault</option>
+              <select className={inputClass} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+                <option value="">Select</option>
+                {COMPLAINT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+              {formErrors.category && <p className="text-xs text-red-600">{formErrors.category}</p>}
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">Priority *</label>
-              <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})}>
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
+              <select className={inputClass} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
+                {COMPLAINT_PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
           </div>
+
+          {isMember ? (
+            <p className="text-sm text-gray-500">Phase: <span className="font-medium text-gray-800">{phaseName(user?.phase)}</span></p>
+          ) : (
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">Phase *</label>
+              <select className={inputClass} value={form.phase} onChange={e => setForm({ ...form, phase: e.target.value })}>
+                <option value="">Select</option>
+                {phases.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              {formErrors.phase && <p className="text-xs text-red-600">{formErrors.phase}</p>}
+            </div>
+          )}
+
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Phase / Location *</label>
-            <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={formData.phase} onChange={e => setFormData({...formData, phase: e.target.value})}>
-              {phases.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            <label className="text-sm font-medium text-gray-700">Exact location</label>
+            <input className={inputClass} maxLength={200} placeholder="e.g. Near Gate 2, opposite villa A-110" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
           </div>
-          
 
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Description *</label>
-            <textarea required rows={3} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Provide details about the issue..."></textarea>
+            <textarea rows={4} maxLength={2000} className={inputClass} placeholder="What happened, and when?" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+            {formErrors.description && <p className="text-xs text-red-600">{formErrors.description}</p>}
           </div>
+
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
-            <Button variant="secondary" type="button" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit">Report Issue</Button>
+            <Button variant="secondary" type="button" onClick={() => setIsReportOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={submitting}>{submitting ? "Submitting…" : "Submit Complaint"}</Button>
           </div>
         </form>
       </Modal>
 
-      <Modal isOpen={replyModalOpen} onClose={() => setReplyModalOpen(false)} title="Reply to Issue">
+      <Modal isOpen={!!replyTarget} onClose={() => setReplyTarget(null)} title={`Reply to #${replyTarget?.ticket_no ?? ""}`}>
         <form onSubmit={handleReplySubmit} className="space-y-4">
+          <p className="text-sm text-gray-600">{replyTarget?.category}: {replyTarget?.description}</p>
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Your Reply *</label>
-            <textarea required rows={4} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Type your response..."></textarea>
+            <label className="text-sm font-medium text-gray-700">Your reply</label>
+            <textarea rows={4} maxLength={2000} className={inputClass} value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="The reporter will see this under their complaint." />
           </div>
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
-            <Button variant="secondary" type="button" onClick={() => setReplyModalOpen(false)}>Cancel</Button>
-            <Button type="submit">Submit Reply</Button>
+            <Button variant="secondary" type="button" onClick={() => setReplyTarget(null)}>Cancel</Button>
+            <Button type="submit" disabled={busyId === replyTarget?.id}>Save Reply</Button>
           </div>
         </form>
       </Modal>
     </div>
   );
 }
-

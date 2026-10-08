@@ -51,11 +51,12 @@ export function LoginPage() {
       )}
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <FormError message={error} />
-        <Field label="Mobile number or email" htmlFor="phone">
+        <Field label="Mobile number" htmlFor="phone">
           <input
             id="phone"
-            type="text"
-            autoComplete="username"
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
             required
             className={inputClass}
             placeholder="9876543210"

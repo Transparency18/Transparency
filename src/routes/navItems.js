@@ -8,7 +8,7 @@ import {
 // Pages and the roles allowed to open them. Used by the sidebar and the route guard.
 export const navItems = [
   { name: "Dashboard", path: "/", icon: LayoutDashboard, roles: Object.values(ROLES) },
-  { name: "Complains", path: "/security", icon: Shield, roles: [ROLES.VOLUNTEER, ROLES.GUARD, ROLES.MEMBER] },
+  { name: "Complaints", path: "/security", icon: Shield, roles: [ROLES.VOLUNTEER, ROLES.GUARD, ROLES.MEMBER] },
   { name: "CCTV Cameras", path: "/cctv", icon: Video, roles: [ROLES.VOLUNTEER, ROLES.MEMBER] },
   { name: "Street Lights", path: "/infrastructure", icon: MapPin, roles: [ROLES.VOLUNTEER] },
   { name: "Visitors", path: "/visitors", icon: Users, roles: [ROLES.GUARD, ROLES.VOLUNTEER] },

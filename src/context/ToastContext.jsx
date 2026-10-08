@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback } from 'react';
-import { X, CheckCircle, MessageSquare } from 'lucide-react';
+import { X, CheckCircle, MessageSquare, AlertCircle } from 'lucide-react';
 
 const ToastContext = createContext();
 
@@ -34,6 +34,10 @@ export const ToastProvider = ({ children }) => {
               <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3 text-green-600">
                 <MessageSquare className="w-4 h-4" />
               </div>
+            ) : toast.type === 'error' ? (
+              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mr-3 text-red-600">
+                <AlertCircle className="w-4 h-4" />
+              </div>
             ) : (
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3 text-blue-600">
                 <CheckCircle className="w-4 h-4" />
@@ -41,7 +45,7 @@ export const ToastProvider = ({ children }) => {
             )}
             
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">{toast.type === 'whatsapp' ? 'WhatsApp Alert' : 'Notification'}</p>
+              <p className="text-sm font-medium text-gray-900">{toast.type === 'whatsapp' ? 'WhatsApp Alert' : toast.type === 'error' ? 'Something went wrong' : 'Notification'}</p>
               <p className="text-sm text-gray-500">{toast.message}</p>
             </div>
             
