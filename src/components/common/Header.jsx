@@ -75,12 +75,7 @@ export function Header({ setSidebarOpen }) {
         </div>
       </header>
 
-      <ProfileActivityModal 
-        isOpen={isProfileOpen} 
-        onClose={() => setIsProfileOpen(false)} 
-        userName={user?.name} 
-        role={role} 
-      />
+      <ProfileActivityModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </>
   );
 }

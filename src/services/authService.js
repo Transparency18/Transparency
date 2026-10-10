@@ -49,6 +49,16 @@ export function getSession() {
   }
 }
 
+// All tabs share one saved session, so a login or logout in another tab replaces it here too.
+// Calls onChange with the new session (or null). Returns an unsubscribe function.
+export function onSessionChange(onChange) {
+  const handler = (e) => {
+    if (e.key === SESSION_KEY || e.key === null) onChange(getSession());
+  };
+  window.addEventListener("storage", handler);
+  return () => window.removeEventListener("storage", handler);
+}
+
 // Calls a protected endpoint. Access tokens expire after ~1 hour, so on a 401
 // it swaps the refresh token for a new pair once and retries.
 export async function authRequest(path, options = {}) {

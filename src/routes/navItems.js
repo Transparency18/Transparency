@@ -9,7 +9,7 @@ import {
 export const navItems = [
   { name: "Dashboard", path: "/", icon: LayoutDashboard, roles: Object.values(ROLES) },
   { name: "Complaints", path: "/security", icon: Shield, roles: [ROLES.VOLUNTEER, ROLES.GUARD, ROLES.MEMBER] },
-  { name: "CCTV Cameras", path: "/cctv", icon: Video, roles: [ROLES.VOLUNTEER, ROLES.MEMBER] },
+  { name: "CCTV Cameras", path: "/cctv", icon: Video, roles: Object.values(ROLES) },
   { name: "Street Lights", path: "/infrastructure", icon: MapPin, roles: [ROLES.VOLUNTEER] },
   { name: "Visitors", path: "/visitors", icon: Users, roles: [ROLES.GUARD, ROLES.VOLUNTEER] },
   { name: "Vehicles", path: "/vehicles", icon: Car, roles: [ROLES.GUARD, ROLES.VOLUNTEER] },

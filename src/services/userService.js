@@ -19,3 +19,9 @@ export function changeUserRole(id, role) {
 export function deleteUser(id) {
   return authRequest(`/api/users/${id}`, { method: "DELETE" });
 }
+
+// Everyone with the guard role (any logged-in user).
+export async function getGuards() {
+  const { guards } = await authRequest("/api/users/guards");
+  return guards;
+}

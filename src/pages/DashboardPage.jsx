@@ -25,12 +25,17 @@ export function DashboardPage() {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        const [statsData, complaintSummary, announcementsData] = await Promise.all([
+        const [statsData, complaintSummary, cameraSummary, totalGuards, announcementsData] = await Promise.all([
           dashboardService.getStats(phase),
           dashboardService.getComplaintSummary(phase).catch(() => ({ activeCount: 0, recent: [] })),
+          dashboardService.getCameraSummary(phase).catch(() => ({
+            totalCameras: 0, camerasNotWorking: 0,
+            cctvTrend: [{ name: 'Could not load cameras', value: 1, color: '#e5e7eb', placeholder: true }],
+          })),
+          dashboardService.getGuardCount().catch(() => 0),
           dashboardService.getAnnouncements()
         ]);
-        setStats({ ...statsData, activeSecurityIssues: complaintSummary.activeCount });
+        setStats({ ...statsData, ...cameraSummary, totalGuards, activeSecurityIssues: complaintSummary.activeCount });
         setRecentIssues(complaintSummary.recent);
         setRecentAnnouncements(announcementsData);
       } catch (error) {

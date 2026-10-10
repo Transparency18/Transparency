@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { getSession, login as apiLogin, logout as apiLogout } from '../services/authService';
+import { getSession, onSessionChange, login as apiLogin, logout as apiLogout } from '../services/authService';
 
 const AuthContext = createContext();
 
@@ -20,6 +20,10 @@ export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(getSession);
   const user = session?.user ?? null;
   const role = ROLE_BY_DB_VALUE[user?.role] ?? ROLES.MEMBER;
+
+  // Follow logins/logouts in other tabs; otherwise this tab would keep showing the old
+  // user while its requests go out with the other tab's token.
+  useEffect(() => onSessionChange(setSession), []);
 
   // Volunteers can switch phase; members always see their own phase.
   const [selectedPhase, setPhase] = useState(() => {

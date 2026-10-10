@@ -13,7 +13,7 @@ const defaultPhases = [
 // Changing DB_VERSION_KEY wipes older browser copies (which held demo data).
 const DB_VERSION_KEY = 'Transparency_db_v19_initialized';
 const COLLECTIONS = [
-  'cameras', 'securityIssues', 'visitors', 'payments', 'expenses', 'announcements',
+  'securityIssues', 'visitors', 'payments', 'expenses', 'announcements',
   'infrastructure', 'vehicles', 'patrols', 'guards', 'committee', 'serviceProviders',
   'closedHouses', 'businesses', 'users',
 ];
@@ -54,23 +54,6 @@ export const localDb = {
       localDb.set('visitors', visitors);
     }
   },
-
-  getCameras: () => localDb.get('cameras'),
-  addCamera: (camera) => {
-    const cameras = localDb.get('cameras');
-    const newCamera = { ...camera, id: `CAM-${String(cameras.length + 1).padStart(3, '0')}` };
-    localDb.set('cameras', [newCamera, ...cameras]);
-    return newCamera;
-  },
-  updateCamera: (id, updates) => {
-    const cameras = localDb.get('cameras');
-    const index = cameras.findIndex(c => c.id === id);
-    if (index > -1) {
-      cameras[index] = { ...cameras[index], ...updates };
-      localDb.set('cameras', cameras);
-    }
-  },
-  deleteCamera: (id) => localDb.deleteItem('cameras', id),
 
   getSecurityIssues: () => localDb.get('securityIssues'),
   addSecurityIssue: (issue) => {
@@ -220,7 +203,6 @@ export const localDb = {
 
   getDashboardStats: (phaseFilter = 'All') => {
     let visitors = localDb.get('visitors');
-    let cameras = localDb.get('cameras');
     let issues = localDb.get('securityIssues');
     let payments = localDb.get('payments');
     let expenses = localDb.get('expenses');
@@ -231,7 +213,6 @@ export const localDb = {
 
     if (phaseFilter !== 'All') {
       visitors = visitors.filter(v => v.phase === phaseFilter || !v.phase);
-      cameras = cameras.filter(c => c.phase === phaseFilter);
       issues = issues.filter(i => i.phase === phaseFilter || !i.phase);
       payments = payments.filter(p => p.phase === phaseFilter || !p.phase);
       expenses = expenses.filter(e => e.phase === phaseFilter || !e.phase);
@@ -242,7 +223,6 @@ export const localDb = {
     }
 
     const activeIssues = issues.filter(i => i.status === "Open" || i.status === "In Progress").length;
-    const faultyCameras = cameras.filter(c => c.status === "Not Working").length;
     const visitorsToday = visitors.filter(v => v.status === "Inside" || v.status === "Exited").length;
 
     const totalCollected = payments.filter(p => p.status === 'Paid').reduce((sum, p) => sum + Number(p.amount), 0);
@@ -272,28 +252,12 @@ export const localDb = {
       visitorTrend.push({ name: dayName, visitors: count });
     }
 
-    // Calculate dynamic CCTV data
-    let workingCameras = 0;
-
-    if (cameras.length > 0) {
-      workingCameras = cameras.length - faultyCameras;
-    }
-
-    const cctvTrend = cameras.length === 0
-      ? [{ name: 'No cameras added yet', value: 1, color: '#e5e7eb', placeholder: true }]
-      : [
-        { name: 'Working', value: workingCameras, color: '#22c55e' },
-        { name: 'Faulty', value: faultyCameras, color: '#ef4444' },
-      ];
-
     const patrolsCompleted = patrols.filter(p => p.status === 'Completed').length;
 
     return {
       visitorsToday,
       vehiclesToday: vehicles.length, // Showing registered vehicles as 'Vehicles Today'
       activeSecurityIssues: activeIssues,
-      totalCameras: cameras.length,
-      camerasNotWorking: faultyCameras,
       streetLightsNotWorking: 0,
       patrolsCompleted: patrolsCompleted,
       totalPatrols: patrols.length,
@@ -303,11 +267,9 @@ export const localDb = {
       pendingPayments,
       savingsAmount,
       streetLightsCount,
-      totalGuards: users.filter(u => u.role === 'Guard').length,
       totalVolunteers: users.filter(u => u.role === 'Volunteer').length,
       totalServices: localDb.get('serviceProviders').length,
-      visitorTrend,
-      cctvTrend
+      visitorTrend
     };
   }
 };
