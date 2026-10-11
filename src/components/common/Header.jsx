@@ -1,12 +1,19 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Bell, LogOut, Menu, User } from "lucide-react";
 import { useAuth, ROLES } from "../../context/AuthContext";
 import { ProfileActivityModal } from "./ProfileActivityModal";
 import { phases } from "../../data/mockData";
 
 export function Header({ setSidebarOpen }) {
+  const navigate = useNavigate();
   const { user, logout, role, phase, setPhase } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <>
@@ -66,7 +73,7 @@ export function Header({ setSidebarOpen }) {
           </div>
 
           <button
-            onClick={logout}
+            onClick={handleLogout}
             title="Log out"
             className="p-2 text-gray-500 hover:bg-gray-100 hover:text-red-600 rounded-full"
           >

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "../../components/common/Button";
 import { useAuth } from "../../context/AuthContext";
 import { AuthShell, Field, FormError, inputClass } from "./AuthShell";
@@ -36,12 +37,16 @@ export function LoginPage() {
       title="Welcome back"
       subtitle="Log in to your resident account"
       footer={
-        <>
+        <span className="inline-flex items-center justify-center flex-wrap gap-1.5">
           Don&apos;t have an account?{" "}
-          <Link to="/register" className="font-bold text-blue-600 underline underline-offset-4 hover:text-blue-700">
-            Register
+          <Link
+            to="/register"
+            className="inline-flex items-center gap-1.5 font-bold text-blue-600 hover:text-blue-700 transition-colors"
+          >
+            <span className="underline underline-offset-4">Register</span>
+            <ArrowLeft className="w-5 h-5 text-blue-600 animate-arrow-bounce shrink-0" />
           </Link>
-        </>
+        </span>
       }
     >
       {location.state?.registered && (

@@ -9,6 +9,10 @@ export function ProtectedRoute({ children }) {
   const location = useLocation();
 
   if (!user) {
+    if (sessionStorage.getItem("transparency_redirect_login")) {
+      sessionStorage.removeItem("transparency_redirect_login");
+      return <Navigate to="/login" replace />;
+    }
     return <Navigate to="/register" replace />;
   }
 

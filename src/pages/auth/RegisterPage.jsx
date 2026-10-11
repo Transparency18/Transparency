@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "../../components/common/Button";
 import { phases } from "../../data/mockData";
 import { register } from "../../services/authService";
@@ -61,12 +62,16 @@ export function RegisterPage() {
       title="Create your account"
       subtitle="Register as a resident"
       footer={
-        <>
+        <span className="inline-flex items-center justify-center flex-wrap gap-1.5">
           Already registered?{" "}
-          <Link to="/login" className="font-bold text-blue-600 underline underline-offset-4 hover:text-blue-700">
-            Log in
+          <Link
+            to="/login"
+            className="inline-flex items-center gap-1.5 font-bold text-blue-600 hover:text-blue-700 transition-colors"
+          >
+            <span className="underline underline-offset-4">Log in</span>
+            <ArrowLeft className="w-5 h-5 text-blue-600 animate-arrow-bounce shrink-0" />
           </Link>
-        </>
+        </span>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>

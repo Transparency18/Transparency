@@ -23,7 +23,12 @@ export const AuthProvider = ({ children }) => {
 
   // Follow logins/logouts in other tabs; otherwise this tab would keep showing the old
   // user while its requests go out with the other tab's token.
-  useEffect(() => onSessionChange(setSession), []);
+  useEffect(() => onSessionChange((newSession) => {
+    if (!newSession) {
+      sessionStorage.setItem("transparency_redirect_login", "1");
+    }
+    setSession(newSession);
+  }), []);
 
   // Volunteers can switch phase; members always see their own phase.
   const [selectedPhase, setPhase] = useState(() => {
@@ -50,6 +55,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    sessionStorage.setItem("transparency_redirect_login", "1");
     apiLogout();
     setSession(null);
   };
