@@ -64,7 +64,7 @@ export function LoginPage() {
             autoComplete="tel"
             required
             className={inputClass}
-            placeholder="9876543210"
+            placeholder="your mobile number"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />

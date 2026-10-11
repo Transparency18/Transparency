@@ -86,7 +86,7 @@ export function RegisterPage() {
         </Field>
 
         <Field label="Mobile number" htmlFor="phone" error={errors.phone}>
-          <input id="phone" type="tel" autoComplete="tel" className={inputClass} placeholder="9876543210" value={form.phone} onChange={update("phone")} />
+          <input id="phone" type="tel" autoComplete="tel" className={inputClass} placeholder="your mobile number" value={form.phone} onChange={update("phone")} />
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
