@@ -69,7 +69,7 @@ export function RegisterPage() {
             className="inline-flex items-center gap-1.5 font-bold text-blue-600 hover:text-blue-700 transition-colors"
           >
             <span className="underline underline-offset-4">Log in</span>
-            <ArrowLeft className="w-5 h-5 text-blue-600 animate-arrow-bounce shrink-0" />
+            <ArrowLeft className="w-20 h-10 text-blue-600 animate-arrow-bounce shrink-0" />
           </Link>
         </span>
       }
